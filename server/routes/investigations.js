@@ -1,0 +1,6 @@
+import {Router} from 'express';import Investigation from '../models/Investigation.js';import {protect,allow} from '../middleware/auth.js';import {deleteCloudinaryAsset} from '../utils/cloudinaryUpload.js';import {logActivity} from '../utils/logActivity.js';
+const r=Router();r.use(protect);
+r.get('/',async(req,res)=>{const f={};if(req.query.status)f.status=req.query.status;res.json(await Investigation.find(f).populate('patient','name patientCode phone').populate('uploadedBy','name').populate('reviewedBy','name').sort({createdAt:-1}).limit(500))});
+r.patch('/:id/status',allow('Admin','Doctor','Senior Staff'),async(req,res)=>{const update={status:req.body.status,notes:req.body.notes};if(['Reviewed','Verified','Doctor Approved'].includes(req.body.status)){update.reviewedBy=req.user._id;update.reviewedAt=new Date()}const x=await Investigation.findByIdAndUpdate(req.params.id,update,{new:true});await logActivity(req,'Investigation Status Updated','investigation',x?._id,req.body.status);res.json(x)});
+r.delete('/:id',allow('Admin','Doctor','Senior Staff'),async(req,res)=>{const x=await Investigation.findById(req.params.id);if(!x)return res.status(404).json({message:'Report not found'});await deleteCloudinaryAsset(x.publicId,x.resourceType,x.deliveryType);await x.deleteOne();res.json({message:'Report deleted'})});
+export default r;

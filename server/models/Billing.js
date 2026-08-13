@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+const pay=new mongoose.Schema({amount:Number,paymentMethod:String,referenceNo:String,notes:String,receivedBy:{type:mongoose.Schema.Types.ObjectId,ref:'User'},createdAt:{type:Date,default:Date.now}},{_id:true});
+const schema=new mongoose.Schema({invoiceNo:{type:String,unique:true,index:true},patient:{type:mongoose.Schema.Types.ObjectId,ref:'Patient',required:true},casePaper:{type:mongoose.Schema.Types.ObjectId,ref:'CasePaper'},subtotal:{type:Number,default:0},discount:{type:Number,default:0},totalAmount:{type:Number,required:true},isManual:{type:Boolean,default:false},status:{type:String,enum:['Paid','Partial','Pending'],default:'Paid'},paymentMethod:{type:String,default:'Cash'},amountPaid:{type:Number,default:0},outstanding:{type:Number,default:0},gstAmount:{type:Number,default:0},payments:[pay]},{timestamps:true});
+export default mongoose.models.Billing||mongoose.model('Billing',schema);

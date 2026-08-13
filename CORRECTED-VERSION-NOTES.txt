@@ -1,0 +1,17 @@
+AYURVEDSHALA VERCEL / CLOUD EDITION — v3.0.0
+
+Production changes:
+- React/Vite frontend remains same-origin and uses /api.
+- Express exported through api/index.js for Vercel Functions.
+- API rewrite is evaluated before the SPA fallback.
+- MongoDB connection is cached/reused for serverless invocations.
+- Vercel automatically selects MongoDB Atlas configuration.
+- Patient photos, documents, reports, medicine images and clinic logo use Cloudinary.
+- No persistent local uploads folder is required in Vercel.
+- Production/custom-domain/same-origin CORS handling added.
+- Vercel deployment health endpoint added/updated.
+- Hosted multipart uploads capped below Vercel's 4.5 MB payload ceiling.
+- Real .env secrets are not included in this distribution.
+- Vercel deployment guide included.
+
+Local same-Wi-Fi development remains supported through npm run dev and Vite's Network URL.

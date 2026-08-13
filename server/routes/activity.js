@@ -1,0 +1,1 @@
+import {Router} from 'express';import ActivityLog from '../models/ActivityLog.js';import {protect,allow} from '../middleware/auth.js';const r=Router();r.use(protect,allow('Admin'));r.get('/',async(req,res)=>res.json(await ActivityLog.find().populate('user','name role').sort({createdAt:-1}).limit(500)));export default r;
