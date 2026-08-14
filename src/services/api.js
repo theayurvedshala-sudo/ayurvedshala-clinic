@@ -2,7 +2,8 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 20000,
+  withCredentials: true,
+  timeout: 30000,
 });
 
 api.interceptors.request.use((config) => {
@@ -14,17 +15,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Do not hard-redirect from here. A single API 401 used to remove the token
+    // and reload /login even when another valid auth mechanism was available.
     if (error.response?.status === 401) {
-      localStorage.removeItem('clinic_token');
-      if (!window.location.pathname.includes('/login')) {
-        window.location.href = '/login';
-      }
+      window.dispatchEvent(new CustomEvent('clinic:unauthorized'));
     }
     return Promise.reject(error);
   }
 );
 
 export default api;
-
-export const errorMessage = (error) =>
-  error?.response?.data?.message || error?.message || 'Something went wrong';
+export const errorMessage = (e) =>
+  e?.response?.data?.message || e?.message || 'Something went wrong';

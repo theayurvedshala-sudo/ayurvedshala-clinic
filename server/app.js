@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js';
-import { cloudinaryConfigured } from './config/cloudinary.js';
+import {cloudinaryConfigured} from './config/cloudinary.js';
 import auth from './routes/auth.js';
 import users from './routes/users.js';
 import patients from './routes/patients.js';
@@ -19,112 +19,19 @@ import search from './routes/search.js';
 import analytics from './routes/analytics.js';
 
 await connectDB();
-
-const app = express();
-app.set('trust proxy', 1);
-
-const configuredOrigins = String(process.env.CLIENT_URL || '')
-  .split(',')
-  .map((value) => value.trim().replace(/\/$/, ''))
-  .filter(Boolean);
-
-const vercelOrigins = [
-  process.env.VERCEL_URL,
-  process.env.VERCEL_PROJECT_PRODUCTION_URL,
-  process.env.VERCEL_BRANCH_URL,
-]
-  .filter(Boolean)
-  .map((host) => `https://${host}`);
-
-const allowedOrigins = new Set([
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  ...configuredOrigins,
-  ...vercelOrigins,
-]);
-
-const allowLan = String(process.env.ALLOW_LAN || 'false').toLowerCase() === 'true';
-
-function isPrivateLanOrigin(origin = '') {
-  try {
-    const { hostname } = new URL(origin);
-    return hostname === 'localhost'
-      || hostname === '127.0.0.1'
-      || /^10\./.test(hostname)
-      || /^192\.168\./.test(hostname)
-      || /^172\.(1[6-9]|2\d|3[01])\./.test(hostname);
-  } catch {
-    return false;
-  }
+const app=express();
+const origins=String(process.env.CLIENT_URL||'http://localhost:5173').split(',').map(s=>s.trim()).filter(Boolean);
+for (const host of [process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL, process.env.VERCEL_PROJECT_PRODUCTION_URL]) {
+  if (host) origins.push(`https://${String(host).replace(/^https?:\/\//,'').replace(/\/$/,'')}`);
 }
-
-app.use((req, res, next) => {
-  const requestHost = req.get('host');
-  const sameOrigin = requestHost ? `${req.protocol}://${requestHost}` : '';
-
-  return cors({
-    origin(origin, callback) {
-      const normalized = String(origin || '').replace(/\/$/, '');
-      const allowed = !origin
-        || normalized === sameOrigin
-        || allowedOrigins.has(normalized)
-        || configuredOrigins.includes('*')
-        || (allowLan && isPrivateLanOrigin(normalized));
-
-      return allowed
-        ? callback(null, true)
-        : callback(new Error(`CORS blocked for origin: ${normalized}`));
-    },
-    credentials: true,
-  })(req, res, next);
-});
-
-app.use(express.json({ limit: '2mb' }));
-app.use(express.urlencoded({ extended: true }));
-
-app.get('/api/health', (req, res) => {
-  const cloudinary = cloudinaryConfigured();
-  res.json({
-    ok: true,
-    database: true,
-    storage: 'cloudinary',
-    cloudinary,
-    uploadsReady: cloudinary,
-    environment: process.env.VERCEL ? 'vercel' : 'local',
-    time: new Date().toISOString(),
-  });
-});
-
-app.use('/api/auth', auth);
-app.use('/api/users', users);
-app.use('/api/patients', patients);
-app.use('/api/inventory', inventory);
-app.use('/api/appointments', appointments);
-app.use('/api/master-data', masterData);
-app.use('/api/settings', settings);
-app.use('/api/activity', activity);
-app.use('/api/dashboard', dashboard);
-app.use('/api/billing', billing);
-app.use('/api/cases', cases);
-app.use('/api/investigations', investigations);
-app.use('/api/search', search);
-app.use('/api/analytics', analytics);
-
-app.use((req, res, next) => {
-  if (req.path.startsWith('/api/')) {
-    return res.status(404).json({ message: `API route not found: ${req.method} ${req.path}` });
-  }
-  return next();
-});
-
-app.use((err, req, res, next) => {
-  console.error(err);
-  const isMulterLimit = err?.code === 'LIMIT_FILE_SIZE' || err?.code === 'LIMIT_FILE_COUNT';
-  res.status(isMulterLimit ? 413 : (err.status || 400)).json({
-    message: isMulterLimit
-      ? 'Upload is too large for this deployment. On Vercel keep each request below 4 MB.'
-      : (err.message || 'Request failed'),
-  });
-});
-
+const allowLan=String(process.env.ALLOW_LAN||'false').toLowerCase()==='true';
+function isPrivateLanOrigin(origin=''){
+ try{const u=new URL(origin);const h=u.hostname;return h==='localhost'||h==='127.0.0.1'||/^10\./.test(h)||/^192\.168\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)}catch{return false}
+}
+app.use(cors({origin:(origin,cb)=>!origin||origins.includes('*')||origins.includes(origin)||(allowLan&&isPrivateLanOrigin(origin))?cb(null,true):cb(new Error('CORS blocked')),credentials:true}));
+app.use(express.json({limit:'2mb'}));
+app.use(express.urlencoded({extended:true}));
+app.get('/api/health',(req,res)=>res.json({ok:true,database:true,cloudinary:cloudinaryConfigured(),lan:allowLan,time:new Date().toISOString()}));
+app.use('/api/auth',auth);app.use('/api/users',users);app.use('/api/patients',patients);app.use('/api/inventory',inventory);app.use('/api/appointments',appointments);app.use('/api/master-data',masterData);app.use('/api/settings',settings);app.use('/api/activity',activity);app.use('/api/dashboard',dashboard);app.use('/api/billing',billing);app.use('/api/cases',cases);app.use('/api/investigations',investigations);app.use('/api/search',search);app.use('/api/analytics',analytics);
+app.use((err,req,res,next)=>{console.error(err);res.status(err.status||400).json({message:err.message||'Request failed'})});
 export default app;
